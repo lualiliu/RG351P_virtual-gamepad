@@ -4,6 +4,18 @@
 #include <cstdio>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <syslog.h>
+#include <linux/ioctl.h>
+#include <sys/fcntl.h> 
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #define XBOX_TYPE_BUTTON    0x01
 #define XBOX_TYPE_AXIS      0x02
@@ -40,6 +52,13 @@
 #define XBOX_AXIS_VAL_MAX       32767
 #define XBOX_AXIS_VAL_MID       0x00
 
+/*
+struct uinput_setup {
+	struct input_id id;
+	char name[UINPUT_MAX_NAME_SIZE];
+	__u32 ff_effects_max;
+};
+*/
 struct js_event {
         __u32 time; /* event timestamp in milliseconds */
         __s16 value; /* value */
@@ -127,6 +146,7 @@ void map_read(int joy_fd,int fd,xbox_map_t *map)
 		 emit(fd, EV_SYN, SYN_REPORT, 0);
 		 emit(fd, EV_KEY, BTN_EAST, 0);
 		 emit(fd, EV_SYN, SYN_REPORT, 0);
+		     //printf("A\n");
                 break;
  
             case XBOX_BUTTON_B:
@@ -242,14 +262,14 @@ void map_read(int joy_fd,int fd,xbox_map_t *map)
                 break;
  
             case XBOX_AXIS_XX:
-		emit(fd, EV_ABS, ABS_HAT0X, value);
+		emit(fd, EV_ABS, ABS_HAT0X, value/XBOX_AXIS_VAL_MAX);
 		emit(fd, EV_SYN, SYN_REPORT, 0);
 		emit(fd, EV_ABS, ABS_HAT0X, 0);
 		emit(fd, EV_SYN, SYN_REPORT, 0);
                 break;
  
             case XBOX_AXIS_YY:
-		emit(fd, EV_ABS, ABS_HAT0Y, value);
+		emit(fd, EV_ABS, ABS_HAT0Y, value/XBOX_AXIS_VAL_MAX);
 		emit(fd, EV_SYN, SYN_REPORT, 0);
 		emit(fd, EV_ABS, ABS_HAT0Y, 0);
 		emit(fd, EV_SYN, SYN_REPORT, 0);
@@ -272,6 +292,42 @@ void joy_close(int joy_fd)
     return;
 }
 
+
+static void create_daemon(void)
+{
+  int x;
+
+  pid_t pid;
+
+  pid = fork();
+  if (pid < 0) {
+    exit(EXIT_FAILURE);
+  }
+
+  if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+
+  if (setsid() < 0) {
+    exit(EXIT_FAILURE);
+  }
+  signal(SIGCHLD, SIG_IGN);
+  signal(SIGHUP, SIG_IGN);
+  pid = fork();
+  if (pid < 0) {
+    exit(EXIT_FAILURE);
+  }
+
+  if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+  umask(0);
+  chdir("/");
+  
+  for (x = sysconf(_SC_OPEN_MAX); x>=0; x--){
+    close(x);
+  }
+}
 
 int main(void)
 {
@@ -319,11 +375,12 @@ int main(void)
    
    memset(&usetup, 0, sizeof(usetup));
    usetup.id.bustype = BUS_USB;
-   usetup.id.vendor = 0x0001; /* sample vendor */
-   usetup.id.product = 0x0001; /* sample product */
-   strcpy(usetup.name, "RG351P Virtual Gamepad");
+   usetup.id.vendor = 0x045E; /* sample vendor */
+   usetup.id.product = 0x028E; /* sample product */
+   usetup.id.version = 1;
+   strcpy(usetup.name, "Microsoft Corp. Xbox360 Controller");
 
-   ioctl(fd, UI_DEV_SETUP, &usetup);
+   ioctl(fd, _IOW(UINPUT_IOCTL_BASE, 3, struct uinput_setup), &usetup);
    ioctl(fd, UI_DEV_CREATE);
  
    xbox_fd = joy_open("/dev/input/js0");
@@ -339,7 +396,7 @@ int main(void)
     * to send. This pause is only needed in our example code!
     */
    /* Key press, report the event, send key release, and report again */
-
+   //create_daemon();
     while(1)
     {
         map_read(xbox_fd,fd, &map);
@@ -352,5 +409,5 @@ int main(void)
    ioctl(fd, UI_DEV_DESTROY);
    close(fd);
 
-   return 0;
+   return EXIT_SUCCESS;
 }
