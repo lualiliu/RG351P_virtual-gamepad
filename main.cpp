@@ -13,9 +13,6 @@
 #include <sys/stat.h>
 #include <syslog.h>
 #include <linux/ioctl.h>
-#include <sys/fcntl.h> 
-#include <sys/stat.h>
-#include <sys/ioctl.h>
 
 #define XBOX_TYPE_BUTTON    0x01
 #define XBOX_TYPE_AXIS      0x02
@@ -52,13 +49,13 @@
 #define XBOX_AXIS_VAL_MAX       32767
 #define XBOX_AXIS_VAL_MID       0x00
 
-/*
+
 struct uinput_setup {
 	struct input_id id;
 	char name[UINPUT_MAX_NAME_SIZE];
 	__u32 ff_effects_max;
 };
-*/
+
 struct js_event {
         __u32 time; /* event timestamp in milliseconds */
         __s16 value; /* value */
@@ -332,10 +329,17 @@ static void create_daemon(void)
 int main(void)
 {
    struct uinput_setup usetup;
-
-
-   int fd = open("/dev/uinput",  O_RDWR | O_NDELAY);
+   struct uinput_user_dev uud;
    
+   int uversion = 0;
+   int fd = open("/dev/uinput",  O_WRONLY | O_NONBLOCK);
+   if(fd < 0)
+   {
+       printf("%d\n",fd);
+       return -1;
+   }
+   int rc = ioctl(fd, UI_GET_VERSION, &uversion);
+   printf("%d\n",uversion);
    int xbox_fd;
    xbox_map_t map;
    int len, type;
@@ -373,14 +377,24 @@ int main(void)
    ioctl(fd, UI_SET_ABSBIT, ABS_HAT0X);
    ioctl(fd, UI_SET_ABSBIT, ABS_HAT0Y);
    
-   memset(&usetup, 0, sizeof(usetup));
-   usetup.id.bustype = BUS_USB;
-   usetup.id.vendor = 0x045E; /* sample vendor */
-   usetup.id.product = 0x028E; /* sample product */
-   usetup.id.version = 1;
-   strcpy(usetup.name, "Microsoft Corp. Xbox360 Controller");
+   if (uversion == 5){
+   	memset(&usetup, 0, sizeof(usetup));
+	usetup.id.bustype = BUS_USB;
+  	usetup.id.vendor = 0x045E; /* sample vendor */
+   	usetup.id.product = 0x028E; /* sample product */
+   	usetup.id.version = 5;
+   	strcpy(usetup.name, "Microsoft Corp. Xbox360 Controller");
 
-   ioctl(fd, _IOW(UINPUT_IOCTL_BASE, 3, struct uinput_setup), &usetup);
+   	ioctl(fd, _IOW(UINPUT_IOCTL_BASE, 3, struct uinput_setup), &usetup);
+   }else{
+   	memset(&uud, 0, sizeof(uud));
+   	uud.id.bustype = BUS_USB;
+  	uud.id.vendor = 0x045E; /* sample vendor */
+   	uud.id.product = 0x028E; /* sample product */
+   	uud.id.version = 5;
+   	snprintf(uud.name, UINPUT_MAX_NAME_SIZE, "Microsoft Corp. Xbox360 Controller");
+   	write(fd, &uud, sizeof(uud));
+   }
    ioctl(fd, UI_DEV_CREATE);
  
    xbox_fd = joy_open("/dev/input/js0");
