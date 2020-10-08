@@ -371,8 +371,8 @@ namespace {
 			case EV_KEY:{
 				switch(ev.code) {
 				// setup buttons
-				case BTN_TL: ev.code = BTN_SELECT; break;
-				case BTN_TR: ev.code = BTN_START; break;
+				case BTN_TR: ev.code = BTN_SELECT; break;
+				case BTN_TL: ev.code = BTN_START; break;
 				// action buttons
 				case BTN_C: ev.code = BTN_X; break; // square
 				case BTN_NORTH: ev.code = BTN_Y; break; // triangle

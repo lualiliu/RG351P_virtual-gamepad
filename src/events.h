@@ -24,7 +24,7 @@
 #include <dirent.h>
 
 namespace events {
-	const char	DEV_INPUT_EVENT[] = "/dev/rg351p",
+	const char	DEV_INPUT_EVENT[] = "/dev/input",
 			EVENT_DEV_NAME[] = "event";
 
 	extern int is_event_device(const struct dirent *dir);
