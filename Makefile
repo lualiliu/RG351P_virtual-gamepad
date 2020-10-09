@@ -9,7 +9,7 @@ OBJDIR=obj
 FLAGS=-g -Wall -std=c++11 
 LIBS=
 OBJS=$(OBJDIR)/options.o $(OBJDIR)/main.o $(OBJDIR)/uinput.o $(OBJDIR)/events.o $(OBJDIR)/joypads.o $(OBJDIR)/log.o 
-EXEC=js2xbox
+EXEC=rg351p-js2xbox
 DATE=$(shell date +"%Y-%m-%d")
 
 $(EXEC) : $(OBJS)
