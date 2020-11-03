@@ -27,7 +27,8 @@ namespace joypads {
 	extern const events::js_desc	j_ps3_bt,
 					j_ps3_usb,
 					j_xbox_360,
-					j_rg351p;
+					j_rg351p,
+					j_oga;
 
 	// supported input joypads
 	extern const events::js_desc	*in[];

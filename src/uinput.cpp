@@ -283,7 +283,90 @@ namespace {
 			ioctl(_fd, UI_DEV_DESTROY);
 		}
 	};
+	class oga_target : public uinput::pad {
+	public:
+		oga_target(void) {
+			if(ioctl(_fd, UI_SET_EVBIT, EV_KEY))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_KEY");
+			if(ioctl(_fd, UI_SET_EVBIT, EV_SYN))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_SYN");
+			if(ioctl(_fd, UI_SET_EVBIT, EV_ABS))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_ABS");
 
+			// setup X-Box 360 pad buttons
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_SOUTH))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_SOUTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_EAST))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_EAST");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_NORTH))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_NORTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_WEST))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_WEST");
+
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TL))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TL");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TR))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TR");
+				
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_DPAD_UP))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_DPAD_UP");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_DPAD_DOWN))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_DPAD_DOWN");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_DPAD_LEFT))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_DPAD_LEFT");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_DPAD_RIGHT))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_DPAD_RIGHT");
+
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY1))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY1");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY2))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY2");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY3))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY3");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY4))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY4");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY5))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY5");
+			if(ioctl(_fd, UI_SET_KEYBIT, BTN_TRIGGER_HAPPY6))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_TRIGGER_HAPPY6");
+									
+			// absolute (sticks)
+			if(ioctl(_fd, UI_SET_ABSBIT, ABS_X))
+				throw std::runtime_error("Can't UI_SET_ABSBIT ABS_X");
+			if(ioctl(_fd, UI_SET_ABSBIT, ABS_Y))
+				throw std::runtime_error("Can't UI_SET_ABSBIT ABS_Y");
+			if(ioctl(_fd, UI_SET_ABSBIT, ABS_RX))
+				throw std::runtime_error("Can't UI_SET_ABSBIT ABS_RX");
+			if(ioctl(_fd, UI_SET_ABSBIT, ABS_RY))
+				throw std::runtime_error("Can't UI_SET_ABSBIT ABS_RY");
+
+			// add the final touches
+			uinput_user_dev	ud = {0};
+			strncpy(ud.name, "odroidgo2_joypad", UINPUT_MAX_NAME_SIZE-1);
+			ud.id.bustype = joypads::j_oga.bus;
+			ud.id.vendor = joypads::j_oga.vendor;
+			ud.id.product = joypads::j_oga.product;
+			ud.id.version = joypads::j_oga.version;
+
+			UINPUT_SET_ABS_P(&ud, ABS_X, -900, 899, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_Y, -900, 899, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_RX, -900, 899, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_RY, -900, 899, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_HAT0X, -1, 1, 0, 0);
+			UINPUT_SET_ABS_P(&ud, ABS_HAT0Y, -1, 1, 0, 0);
+
+			// initialize
+			if(sizeof(ud) != write(_fd, &ud, sizeof(ud)))
+				throw std::runtime_error("Can't setup uinput_user_dev");
+			if(ioctl(_fd, UI_DEV_CREATE))
+				throw std::runtime_error("Can't UI_DEV_CREATE");
+		}
+
+		~oga_target() {
+			// try to destroy and close the device
+			ioctl(_fd, UI_DEV_DESTROY);
+		}
+	};
 	// layered conversion
 	class ps3_2_xbox : public xbox_target {
 	public:
@@ -397,11 +480,91 @@ namespace {
 				case ABS_HAT0Y: { ev.type = EV_ABS; ev.code = ABS_HAT0Y; ev.value = ev.value;} break; // up
 				case ABS_HAT0X: { ev.type = EV_ABS; ev.code = ABS_HAT0X; ev.value = ev.value;} break; // left
 				// left stick
-				case ABS_Z: { ev.code = ABS_X; ev.value = (ev.value*(32768*2)/4095-32768) * -1;} break; // from 0 --> 255 to -32768 --> 32768
+				case ABS_Z: { ev.code = ABS_X; ev.value = (ev.value*(32768*2)/4095-32768) * -1;} break;
 				case ABS_RX: { ev.code = ABS_Y; ev.value = (ev.value*(32768*2)/4095-32768) * -1;} break;
 				// right stick
 				case ABS_RY: { ev.code = ABS_RX; ev.value = ev.value*(32768*2)/4095-32768;} break;
 				case ABS_RZ: { ev.code = ABS_RY; ev.value = ev.value*(32768*2)/4095-32768;} break;
+				// do not report any other axis
+				default:
+					return false;
+				}
+			} return true;
+			default:
+				break;
+			}
+			return false;
+		}
+	};
+	
+	class rg351p_2_oga : public oga_target {
+	public:
+		int direction_hatX = BTN_DPAD_LEFT;
+		int direction_hatY = BTN_DPAD_UP;
+		virtual bool translate_event(input_event& ev) {
+			switch(ev.type) {
+			case EV_SYN:
+				return true;
+			case EV_KEY:{
+				switch(ev.code) {
+				// setup buttons
+				case BTN_TR: ev.code = BTN_TRIGGER_HAPPY1; break;
+				case BTN_TL: ev.code = BTN_TRIGGER_HAPPY6; break;
+				// action buttons
+				case BTN_C: ev.code = BTN_NORTH; break; // square
+				case BTN_NORTH: ev.code = BTN_WEST; break; // triangle
+				case BTN_SOUTH: ev.code = BTN_EAST; break; // cross
+				case BTN_EAST: ev.code = BTN_SOUTH; break; // round
+				// back
+				case BTN_WEST: ev.code = BTN_TL; break;
+				case BTN_Z: ev.code = BTN_TR; break;
+				// analog stick buttons
+				case BTN_TL2: ev.code = BTN_TRIGGER_HAPPY2; break;
+				case BTN_TR2: ev.code = BTN_TRIGGER_HAPPY5; break;
+				// do not report any other button
+				case BTN_START:  ev.code = BTN_TRIGGER_HAPPY3; break;
+				case BTN_SELECT: ev.code = BTN_TRIGGER_HAPPY4; break;
+				default:
+					return false;
+				}
+			}	return true;
+			case EV_ABS: {
+				switch(ev.code) {
+				// D-Pad - on PS3 is digital, we'll use that one
+				case ABS_HAT0Y: {
+							ev.type = EV_KEY;
+							 if(ev.value == -1){
+							 	ev.code = BTN_DPAD_UP;
+							 	direction_hatY = BTN_DPAD_UP;
+							 }else if(ev.value == 1){
+							 	ev.code = BTN_DPAD_DOWN;
+							 	direction_hatY = BTN_DPAD_DOWN;
+							 }else if(ev.value == 0){
+							 	ev.code = direction_hatY;
+							 }
+							ev.value = ev.value;
+						 }
+						 break; // up
+				case ABS_HAT0X: {
+							ev.type = EV_KEY;
+							 if(ev.value == -1){
+							 	ev.code = BTN_DPAD_LEFT;
+							 	direction_hatX = BTN_DPAD_LEFT;
+							 }else if(ev.value == 1){
+							 	ev.code = BTN_DPAD_RIGHT;
+							 	direction_hatX = BTN_DPAD_RIGHT;
+							 }else if(ev.value == 0){
+							 	ev.code = direction_hatX;
+							 }
+							ev.value = ev.value;
+						 }
+						 break; // left
+				// left stick
+				case ABS_Z: { ev.code = ABS_X; ev.value = (ev.value*900/4096) * -1;} break;
+				case ABS_RX: { ev.code = ABS_Y; ev.value = (ev.value*900/4096) * -1;} break;
+				// right stick
+				case ABS_RY: { ev.code = ABS_RX; ev.value = (ev.value*900/4096);} break;
+				case ABS_RZ: { ev.code = ABS_RY; ev.value = (ev.value*900/4096);} break;
 				// do not report any other axis
 				default:
 					return false;
@@ -462,6 +625,12 @@ uinput::pad* uinput::get_pad(const events::js_desc *in_type, const events::js_de
 	// if both pads are the same, just throw an exception straight away...
 	if(in_type == out_type)
 		throw std::runtime_error(std::string("Invalid translation and abstraction for '") + in_type->i_name + "' to '" + out_type->i_name + "' (no point in creating one identical abstract device)");
+	// switch logic... a bit verbose for now
+	if(out_type == &joypads::j_oga) {
+		// both the USB and BT version behave the same... 
+		if(in_type == &joypads::j_rg351p)
+			return new rg351p_2_oga();
+	} 
 	// switch logic... a bit verbose for now
 	if(out_type == &joypads::j_xbox_360) {
 		// both the USB and BT version behave the same... 
