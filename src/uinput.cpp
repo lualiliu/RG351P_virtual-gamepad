@@ -367,6 +367,65 @@ namespace {
 			ioctl(_fd, UI_DEV_DESTROY);
 		}
 	};
+
+	class vkb_target : public uinput::pad {
+	public:
+		vkb_target(void) {
+			if(ioctl(_fd, UI_SET_EVBIT, EV_KEY))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_KEY");
+			if(ioctl(_fd, UI_SET_EVBIT, EV_SYN))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_SYN");
+			if(ioctl(_fd, UI_SET_EVBIT, EV_ABS))
+				throw std::runtime_error("Can't UI_SET_EVBIT EV_ABS");
+
+			// setup vkb buttons
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_UP))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_SOUTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_DOWN))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_EAST");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_LEFT))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_NORTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_RIGHT))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_WEST");
+
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_ENTER))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_SOUTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_Z))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_EAST");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_X))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_NORTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_S))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_WEST");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_A))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_WEST");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_D))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_NORTH");
+			if(ioctl(_fd, UI_SET_KEYBIT, KEY_F))
+				throw std::runtime_error("Can't UI_SET_KEYBIT BTN_EAST");
+
+			// add the final touches
+			uinput_user_dev	ud = {0};
+			strncpy(ud.name, "AT Translated Set 2 keyboard", UINPUT_MAX_NAME_SIZE-1);
+			ud.id.bustype = joypads::j_vkb.bus;
+			ud.id.vendor = joypads::j_vkb.vendor;
+			ud.id.product = joypads::j_vkb.product;
+			ud.id.version = joypads::j_vkb.version;
+
+			// initialize
+			if(sizeof(ud) != write(_fd, &ud, sizeof(ud)))
+				throw std::runtime_error("Can't setup uinput_user_dev");
+			if(ioctl(_fd, UI_DEV_CREATE))
+				throw std::runtime_error("Can't UI_DEV_CREATE");
+		}
+
+		~vkb_target() {
+			// try to destroy and close the device
+			ioctl(_fd, UI_DEV_DESTROY);
+		}
+	};
+
+
+
 	// layered conversion
 	class ps3_2_xbox : public xbox_target {
 	public:
@@ -576,6 +635,71 @@ namespace {
 			return false;
 		}
 	};
+
+	class rg351p_2_vkb : public vkb_target {
+	public:
+		int direction_hatX = KEY_LEFT;
+		int direction_hatY = KEY_UP;
+		virtual bool translate_event(input_event& ev) {
+			switch(ev.type) {
+			case EV_SYN:
+				return true;
+			case EV_KEY:{
+				switch(ev.code) {
+				// setup buttons
+				case BTN_TR: ev.code = KEY_ENTER; break;    //start
+				// action buttons
+				case BTN_C: ev.code = KEY_Z; break; // square
+				case BTN_NORTH: ev.code = KEY_X; break; // triangle
+				case BTN_SOUTH: ev.code = KEY_S; break; // cross
+				case BTN_EAST: ev.code = KEY_A; break; // round
+				// back
+				case BTN_WEST: ev.code = KEY_D; break;
+				case BTN_Z: ev.code = KEY_F; break;
+				default:
+					return false;
+				}
+			}	return true;
+			case EV_ABS: {
+                if(ev.code == ABS_HAT0Y){
+							ev.type = EV_KEY;
+							 if(ev.value == -1){
+							 	ev.code = KEY_UP;
+							 	direction_hatY = KEY_UP;
+							 }else if(ev.value == 1){
+							 	ev.code = KEY_DOWN;
+							 	direction_hatY = KEY_DOWN;
+							 }else if(ev.value == 0){
+							 	ev.code = direction_hatY;
+							 }
+							ev.value = ev.value;
+                             return true;
+						 }
+                else if(ev.code == ABS_HAT0X){
+							ev.type = EV_KEY;
+							 if(ev.value == -1){
+							 	ev.code = KEY_LEFT;
+							 	direction_hatX = KEY_LEFT;
+							 }else if(ev.value == 1){
+							 	ev.code = KEY_RIGHT;
+							 	direction_hatX = KEY_RIGHT;
+							 }else if(ev.value == 0){
+							 	ev.code = direction_hatX;
+							 }
+							ev.value = ev.value;
+                              return true;						 
+                           }
+                             
+                else{
+                    return false;
+                }
+			}
+			default:
+				break;
+			}
+			return false;
+		}
+	};
 }
 
 uinput::pad::pad(void) : _fd(open(DEV_UINPUT, O_WRONLY | O_NONBLOCK)) {
@@ -630,6 +754,12 @@ uinput::pad* uinput::get_pad(const events::js_desc *in_type, const events::js_de
 		// both the USB and BT version behave the same... 
 		if(in_type == &joypads::j_rg351p)
 			return new rg351p_2_oga();
+	} 
+	// switch logic... a bit verbose for now
+	if(out_type == &joypads::j_vkb) {
+		// both the USB and BT version behave the same... 
+		if(in_type == &joypads::j_rg351p)
+			return new rg351p_2_vkb();
 	} 
 	// switch logic... a bit verbose for now
 	if(out_type == &joypads::j_xbox_360) {
