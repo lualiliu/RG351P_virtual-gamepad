@@ -2,6 +2,14 @@
 
 Simple user-space utility to map RG351P input joypad to a virtual Xbox 360 controller; Try to solve the key adaptation problem of RG351P in Batocera.linux and android.
 
+# openbor user
+
+Please use command: 
+```
+./rg351p-js2xbox -t at_vkb
+```
+And Disabled Gamepad in Openbor Engine.
+
 ## Building
 
 Just download this repository and invoke `make` (`make release` for optimized build). This project does not depend on any library, only a recent kernel and compiler (c++11) are needed.
