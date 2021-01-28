@@ -647,7 +647,7 @@ namespace {
 			case EV_KEY:{
 				switch(ev.code) {
 				// setup buttons
-				case BTN_TR: ev.code = KEY_ENTER; break;    //start
+				case BTN_TL: ev.code = KEY_ENTER; break;    //start
 				// action buttons
 				case BTN_C: ev.code = KEY_Z; break; // square
 				case BTN_NORTH: ev.code = KEY_X; break; // triangle
@@ -666,11 +666,14 @@ namespace {
 							 if(ev.value == -1){
 							 	ev.code = KEY_UP;
 							 	direction_hatY = KEY_UP;
+                                  ev.value = 1;
 							 }else if(ev.value == 1){
 							 	ev.code = KEY_DOWN;
 							 	direction_hatY = KEY_DOWN;
+                                  ev.value = 1;
 							 }else if(ev.value == 0){
 							 	ev.code = direction_hatY;
+                                  ev.value = 0;
 							 }
 							ev.value = ev.value;
                              return true;
@@ -680,13 +683,16 @@ namespace {
 							 if(ev.value == -1){
 							 	ev.code = KEY_LEFT;
 							 	direction_hatX = KEY_LEFT;
+                                  ev.value = 1;
 							 }else if(ev.value == 1){
 							 	ev.code = KEY_RIGHT;
 							 	direction_hatX = KEY_RIGHT;
+                                  ev.value = 1;
 							 }else if(ev.value == 0){
 							 	ev.code = direction_hatX;
+                                  ev.value = 0;
 							 }
-							ev.value = ev.value;
+							
                               return true;						 
                            }
                              
