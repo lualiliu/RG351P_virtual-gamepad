@@ -348,10 +348,10 @@ namespace {
 			ud.id.product = joypads::j_oga.product;
 			ud.id.version = joypads::j_oga.version;
 
-			UINPUT_SET_ABS_P(&ud, ABS_X, -900, 899, 16, 128);
-			UINPUT_SET_ABS_P(&ud, ABS_Y, -900, 899, 16, 128);
-			UINPUT_SET_ABS_P(&ud, ABS_RX, -900, 899, 16, 128);
-			UINPUT_SET_ABS_P(&ud, ABS_RY, -900, 899, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_X, -1800, 1800, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_Y, -1800, 1800, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_RX, -1800, 1800, 16, 128);
+			UINPUT_SET_ABS_P(&ud, ABS_RY, -1800, 1800, 16, 128);
 			UINPUT_SET_ABS_P(&ud, ABS_HAT0X, -1, 1, 0, 0);
 			UINPUT_SET_ABS_P(&ud, ABS_HAT0Y, -1, 1, 0, 0);
 
@@ -619,11 +619,74 @@ namespace {
 						 }
 						 break; // left
 				// left stick
-				case ABS_Z: { ev.code = ABS_X; ev.value = (ev.value*900/4096) * -1;} break;
-				case ABS_RX: { ev.code = ABS_Y; ev.value = (ev.value*900/4096) * -1;} break;
-				// right stick
-				case ABS_RY: { ev.code = ABS_RX; ev.value = (ev.value*900/4096);} break;
-				case ABS_RZ: { ev.code = ABS_RY; ev.value = (ev.value*900/4096);} break;
+				case ABS_Z: 
+                                   ev.code = ABS_X;
+                                   if (ev.value <= 1900)
+                                   {
+                                      ev.value = 1800-(ev.value*1800/4096) * 1;
+                                      return true;
+                                   }
+                                   else if (ev.value >= 2300)
+                                   {
+                                      ev.value = (ev.value*1800/4096) * -1;
+                                      return true;
+                                   }
+                                   else
+                                   {
+                                      ev.value = 0;
+                                      return true;
+                                   }
+				case ABS_RX:
+                                   ev.code = ABS_Y; 
+                                   if (ev.value <= 1700)
+                                   {
+                                      ev.value = 1800-(ev.value*1800/4096) * 1;
+                                      return true;
+                                   }
+                                   else if (ev.value >= 2300)
+                                   {
+                                      ev.value = (ev.value*1800/4096) * -1;
+                                      return true;
+                                   }
+                                   else
+                                   {
+                                      ev.value = 0;
+                                      return true;
+                                   }
+				case ABS_RY: 
+                                   ev.code = ABS_RX;
+                                   if (ev.value <= 1900)
+                                   {
+                                      ev.value = (1800-(ev.value*1800/4096) * 1) * -1;
+                                      return true;
+                                   }
+                                   else if (ev.value >= 2300)
+                                   {
+                                      ev.value = ((ev.value*1800/4096) * -1) * -1;
+                                      return true;
+                                   }
+                                   else
+                                   {
+                                      ev.value = 0;
+                                      return true;
+                                   }
+				case ABS_RZ:
+                                   ev.code = ABS_RY; 
+                                   if (ev.value <= 1900)
+                                   {
+                                      ev.value = (1800-(ev.value*1800/4096) * 1) * -1;
+                                      return true;
+                                   }
+                                   else if (ev.value >= 2300)
+                                   {
+                                      ev.value = ((ev.value*1800/4096) * -1) * -1;
+                                      return true;
+                                   }
+                                   else
+                                   {
+                                      ev.value = 0;
+                                      return true;
+                                   }
 				// do not report any other axis
 				default:
 					return false;
